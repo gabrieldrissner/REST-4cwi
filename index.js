@@ -2,8 +2,12 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const mysql = require("mysql2/promise");
+const jwt = require("jsonwebtoken");
 dotenv.config();
 const app = express();
+
+const TOKEN_SECRET = process.env.TOKEN_SECRET;
+
 app.use(cors());
 app.use((req, res, next) => {
   express.json()(req, res, (err) => {
@@ -50,7 +54,7 @@ async function checkConnection() {
 // Call the function to check the connection
 checkConnection();
 
-app.get("/todos", async function (req, res) {
+app.get("/todos", authenticateToken, async function (req, res) {
   try {
     const sql = "SELECT * FROM todos";
     var todos = await query(sql);
@@ -100,5 +104,53 @@ app.post("/hello/body", function (req, res) {
 
   res.send(req.body);
 });
+
+// LOGIN
+app.get("/user/login", async function (req, res) {
+  // data = req.body;
+  let sql =
+    "select username, password from user where username = ? and password = ?";
+  const values = [req.body.username, req.body.password];
+  try {
+    const results = await query(sql, values);
+    if (results.length === 0) {
+      return res
+        .status(409)
+        .json({ status: 409, message: "username oder password falsch" });
+    }
+    const token = generateAccessToken({ username: req.body.username });
+    return res.status(201).json({
+      token: token,
+      status: 201,
+      message: "erfolgreich eingeloggt und token erstellt",
+    });
+  } catch (err) {
+    console.error("Database error:", err);
+    return res
+      .status(500)
+      .json({ status: 500, message: "Datenbankfehler: " + err.message });
+  }
+});
+
+// Token für User erstellen
+function generateAccessToken(username) {
+  return jwt.sign(username, TOKEN_SECRET, { expiresIn: "1800s" });
+}
+
+//Token Überprüfung
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token)
+    return res
+      .status(401)
+      .json({ message: "kein token gefunden", status: 401 });
+  jwt.verify(token, TOKEN_SECRET, (err, user) => {
+    if (err)
+      return res.status(403).json({ message: "falscher token", status: 403 });
+    req.user = user;
+    next();
+  });
+}
 
 app.listen(3000, () => console.log("Example REST gestartet"));
