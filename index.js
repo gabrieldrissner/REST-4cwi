@@ -54,7 +54,8 @@ async function checkConnection() {
 // Call the function to check the connection
 checkConnection();
 
-app.get("/todos", authenticateToken, async function (req, res) {
+//app.get("/todos", authenticateToken, async function (req, res) {
+app.get("/todos", async function (req, res) {
   try {
     const sql = "SELECT * FROM todos";
     var todos = await query(sql);
