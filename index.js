@@ -54,6 +54,73 @@ async function checkConnection() {
 // Call the function to check the connection
 checkConnection();
 
+//put
+app.put("/todos/:id", authenticateToken, async function (req, res) {
+  if (
+    isNaN(req.params.id) ||
+    !todoValidator(req.body.title, req.body.completed)
+  ) {
+    res.status(404).json({
+      status: 404,
+      message: "keine Todos gefunden",
+    });
+    return;
+  }
+
+  //update
+  try {
+    const sql = "UPDATE todoDB .todos SET title=?,COMPLETED=? WHERE id= ?";
+    var todos = await query(sql, [
+      req.body.title,
+      req.body.completed,
+      req.params.id,
+    ]);
+    console.log(todos);
+    if (todos.length == 0) {
+      res.status(404).json({
+        status: 404,
+        message: "keine Todos gefunden",
+      });
+      return;
+    }
+  } catch (err) {
+    res.status(500).send({
+      status: 500,
+      message: err,
+    });
+  }
+  return;
+});
+
+//delete
+app.delete("/todos/:id", authenticateToken, async function (req, res) {
+  if (isNaN(req.params.id)) {
+    res.status(404).json({
+      status: 404,
+      message: "ID ist keine Zahl ",
+    });
+    return;
+  }
+  try {
+    const sql = "DELETE FROM todoDB.todos WHERE id=?";
+    var todos = await query(sql, [req.params.id]);
+    console.log(todos);
+    if (todos.length == 0) {
+      res.status(404).json({
+        status: 404,
+        message: "keine Todos gefunden",
+      });
+      return;
+    }
+  } catch (err) {
+    res.status(500).send({
+      status: 500,
+      message: err,
+    });
+  }
+  return;
+});
+
 //app.get("/todos", authenticateToken, async function (req, res) {
 app.get("/todos", async function (req, res) {
   try {
