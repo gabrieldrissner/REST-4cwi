@@ -5,6 +5,9 @@ const mysql = require("mysql2/promise");
 const jwt = require("jsonwebtoken");
 dotenv.config();
 const app = express();
+const todoValidator = ajv.compile(todoScheme);
+const { todoScheme } = require("./schemes/TodoScheme");
+const ajv = new Ajv();
 
 const TOKEN_SECRET = process.env.TOKEN_SECRET;
 
@@ -53,6 +56,35 @@ async function checkConnection() {
 }
 // Call the function to check the connection
 checkConnection();
+
+//post
+app.post("/todos", authenticateToken, async function (req, res) {
+  if (!todoValidator(req.body)) {
+    res.status(404).json({
+      status: 404,
+      message: "keine Todos gefunden",
+    });
+    return;
+  }
+  try {
+    const sql = "INSERT INTO todos (title, completed) valus (?,?)";
+    var todos = await query(sql, [req.body.title, req.body.completed]);
+    console.log(todos);
+    if (todos.length == 0) {
+      res.status(404).json({
+        status: 404,
+        message: "keine Todos gefunden",
+      });
+      return;
+    }
+  } catch (err) {
+    res.status(500).send({
+      status: 500,
+      message: err,
+    });
+  }
+  return;
+});
 
 //put
 app.put("/todos/:id", authenticateToken, async function (req, res) {
